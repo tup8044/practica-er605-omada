@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Práctica de Balanceo de Carga - TP-Link Omada ER605</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+
+  <header>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙 Modo Oscuro</button>
+    <h1>Práctica de Balanceo de Carga</h1>
+    <p>Guía Interactiva de Laboratorio con TP-Link Omada ER605 Gigabit Multi-WAN Router</p>
+  </header>
+
+  <div class="container">
+
+    <!-- Conceptos Visuales -->
+    <div class="grid-2">
+      <div class="card hardware-card">
+        <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80" alt="Servidores y Redes" class="hardware-img">
+        <h2>🌐 ¿Qué es el Balanceo de Carga?</h2>
+        <p>Es una técnica de administración de red que distribuye el tráfico saliente de la LAN entre múltiples interfaces WAN (proveedores de Internet), previniendo saturaciones de ancho de banda y maximizando el rendimiento.</p>
+      </div>
+
+      <div class="card hardware-card">
+        <img src="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&fit=crop&w=600&q=80" alt="Cableado Ethernet" class="hardware-img">
+        <h2>⚡ Beneficios Clave</h2>
+        <p>Aumenta la velocidad efectiva disponible, garantiza redundancia mediante <strong>Failover automático</strong> ante caídas de enlace y mejora la estabilidad operativa del entorno corporativo o escolar.</p>
+      </div>
+    </div>
+
+    <!-- Diagrama SVG Interactivo -->
+    <div class="network-container">
+      <h2>Simulador Visual de Topología - TP-Link ER605</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">Haz clic en los botones para simular eventos de tráfico en tiempo real:</p>
+      
+      <svg width="100%" height="240" viewBox="0 0 700 240" style="max-width: 700px;">
+        <!-- ISP 1 -->
+        <circle cx="120" cy="50" r="30" fill="#0070c0" opacity="0.2"/>
+        <text x="120" y="55" text-anchor="middle" fill="var(--text)" font-weight="bold">ISP 1 (WAN1)</text>
+        <text x="120" y="95" text-anchor="middle" font-size="12" fill="var(--text-muted)">192.168.1.1</text>
+
+        <!-- ISP 2 -->
+        <circle cx="580" cy="50" r="30" fill="#00a8ff" opacity="0.2"/>
+        <text x="580" y="55" text-anchor="middle" fill="var(--text)" font-weight="bold">ISP 2 (WAN2)</text>
+        <text x="580" y="95" text-anchor="middle" font-size="12" fill="var(--text-muted)">192.168.2.1</text>
+
+        <!-- Enlaces WAN -->
+        <line id="link-wan1" x1="150" y1="50" x2="300" y2="120" stroke="#0070c0" stroke-width="4" stroke-dasharray="8" class="packet"/>
+        <line id="link-wan2" x1="550" y1="50" x2="400" y2="120" stroke="#00a8ff" stroke-width="4" stroke-dasharray="8" class="packet"/>
+
+        <!-- ER605 Router -->
+        <rect x="300" y="100" width="100" height="50" rx="8" fill="#1e293b" stroke="#00a8ff" stroke-width="2"/>
+        <text x="350" y="125" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="bold">TP-Link ER605</text>
+        <text x="350" y="140" text-anchor="middle" fill="#94a3b8" font-size="10">LAN: 192.168.0.1</text>
+
+        <!-- Enlace LAN -->
+        <line x1="350" y1="150" x2="350" y2="190" stroke="#2ec4b6" stroke-width="3"/>
+
+        <!-- Cliente LAN -->
+        <rect x="310" y="190" width="80" height="35" rx="5" fill="#2ec4b6"/>
+        <text x="350" y="212" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold">Equipos LAN</text>
+      </svg>
+
+      <div class="controls-bar">
+        <button class="btn" onclick="simulateTraffic('normal')">🔄 Estado Normal (WAN1 + WAN2)</button>
+        <button class="btn btn-danger" onclick="simulateTraffic('wan1-down')">⚠ Simular Caída ISP 1 (Failover)</button>
+        <button class="btn btn-success" onclick="simulateTraffic('wan2-heavy')">📊 Simular Carga Alta en WAN 2</button>
+      </div>
+
+      <div id="sim-status" class="alert-box" style="display:none; text-align: left; max-width: 650px; margin: 1rem auto 0 auto;"></div>
+    </div>
+
+    <!-- Pestañas del Paso a Paso -->
+    <div class="card">
+      <h2>🛠️ Paso a Paso de la Práctica</h2>
+      <p style="margin-bottom: 1rem; color: var(--text-muted);">Selecciona cada pestaña para consultar la configuración requerida:</p>
+
+      <div class="tabs-nav">
+        <button class="tab-btn active" onclick="openTab(event, 'paso1')">1. Modo WAN</button>
+        <button class="tab-btn" onclick="openTab(event, 'paso2')">2. Configurar IPs</button>
+        <button class="tab-btn" onclick="openTab(event, 'paso3')">3. Online Detection</button>
+        <button class="tab-btn" onclick="openTab(event, 'paso4')">4. Balanceo de Carga</button>
+        <button class="tab-btn" onclick="openTab(event, 'paso5')">5. Pruebas y Failover</button>
+      </div>
+
+      <!-- Paso 1 -->
+      <div id="paso1" class="tab-content active">
+        <h3>Paso 1: Habilitar Puerto WAN Secundario</h3>
+        <p>Ingresa a la consola web del ER605 en <code>http://192.168.0.1</code>. Ve a <strong>Network > WAN Mode</strong> y selecciona <strong>2 WAN Ports</strong> para habilitar el puerto WAN/LAN1 como interfaz de Internet adicional.</p>
+        
+        <div class="screenshot-container">
+          <img src="images/paso1-wan-mode.png" onerror="this.src='https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80'" alt="Panel WAN Mode" class="step-img">
+          <p class="img-caption">Figura 1.1: Habilitación de puertos Multi-WAN en la interfaz web de Omada.</p>
+        </div>
+      </div>
+
+      <!-- Paso 2 -->
+      <div id="paso2" class="tab-content">
+        <h3>Paso 2: Asignación de Direcciones IP</h3>
+        <p>Ve a <strong>Network > WAN</strong> y selecciona el tipo de conexión (DHCP o IP Estática) para WAN1 y WAN2. Asegúrate de que las subredes de las WAN no colisionen con el segmento de la LAN (<code>192.168.0.X</code>).</p>
+        
+        <div class="screenshot-container">
+          <img src="images/paso2-wan-ip.png" onerror="this.src='https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=900&q=80'" alt="Configuración de IP WAN" class="step-img">
+          <p class="img-caption">Figura 2.1: Asignación de parámetros de red por interfaz WAN.</p>
+        </div>
+      </div>
+
+      <!-- Paso 3 -->
+      <div id="paso3" class="tab-content">
+        <h3>Paso 3: Monitoreo de Enlaces (Online Detection)</h3>
+        <p>Accede a <strong>Network > WAN > Online Detection</strong>. Cambia el modo a <strong>Manual</strong> e introduce direcciones IP públicas de prueba para el rastreo de latencia y disponibilidad por Ping.</p>
+        
+        <div class="router-ui">
+          <div class="router-header">
+            <span>Network > WAN > Online Detection</span>
+            <span>Mode: Manual</span>
+          </div>
+          <div class="router-body">
+            <div class="ui-row">
+              <span>WAN1 Target Ping IP:</span>
+              <span style="color:#2ec4b6;">8.8.8.8 (Google DNS)</span>
+            </div>
+            <div class="ui-row">
+              <span>WAN2 Target Ping IP:</span>
+              <span style="color:#2ec4b6;">1.1.1.1 (Cloudflare DNS)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 4 -->
+      <div id="paso4" class="tab-content">
+        <h3>Paso 4: Activación del Algoritmo de Balanceo</h3>
+        <p>Ve al menú <strong>Transmission > Load Balancing > Basic Settings</strong>. Marca la casilla <strong>Enable Load Balancing</strong> y habilita la distribución proporcional en función del ancho de banda disponible.</p>
+        
+        <div class="screenshot-container">
+          <img src="images/paso4-load-balancing.png" onerror="this.src='https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80'" alt="Menú Load Balancing" class="step-img">
+          <p class="img-caption">Figura 4.1: Activación de políticas de balanceo de carga en la consola.</p>
+        </div>
+      </div>
+
+      <!-- Paso 5 -->
+      <div id="paso5" class="tab-content">
+        <h3>Paso 5: Pruebas de Tráfico y Failover</h3>
+        <p>Ejecuta el comando <code>tracert 8.8.8.8</code> desde una máquina cliente en la LAN para verificar el salto por la WAN primaria. Desconecta físicamente el cable de WAN1 para confirmar la conmutación automática inmediata a la línea WAN2.</p>
+      </div>
+    </div>
+
+    <!-- Lista de Verificación -->
+    <div class="card" style="margin-top: 2rem;">
+      <h2>📋 Lista de Verificación (Checklist)</h2>
+      <ul class="checklist">
+        <li><input type="checkbox" id="c1"><label for="c1">Verificar que los rangos IP de WAN1, WAN2 y LAN sean independientes.</label></li>
+        <li><input type="checkbox" id="c2"><label for="c2">Establecer "2 WAN Ports" en el menú Network > WAN Mode.</label></li>
+        <li><input type="checkbox" id="c3"><label for="c3">Confirmar estado "Connected" en la vista System Status de ambas WAN.</label></li>
+        <li><input type="checkbox" id="c4"><label for="c4">Habilitar Online Detection con servidores estables (8.8.8.8 / 1.1.1.1).</label></li>
+        <li><input type="checkbox" id="c5"><label for="c5">Activar "Enable Load Balancing" en el apartado Transmission.</label></li>
+        <li><input type="checkbox" id="c6"><label for="c6">Simular caída de cable en WAN1 y verificar continuidad de navegación por WAN2.</label></li>
+      </ul>
+    </div>
+
+  </div>
+
+</body>
+</html>
+
